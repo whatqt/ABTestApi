@@ -1,13 +1,13 @@
+from pathlib import Path
 import sys
-sys.path.append('..')
+sys.path.append(str(Path(__file__).parent))
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+# app'ки
+from index.index_app import app as index_app
 
 
 
+main_app = FastAPI()
 
-app = FastAPI()
+main_app.mount("/", index_app)
 
-app.mount("path_app", "name_app")
-templates = Jinja2Templates(directory="templates")
