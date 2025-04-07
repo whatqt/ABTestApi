@@ -3,7 +3,7 @@ import sys
 sys.path.append(str(Path(__file__).parent))
 from fastapi import FastAPI
 # app'ки
-from index.index_app import app as index_app
+from apps.index.index_app import app as index_app
 
 
 
