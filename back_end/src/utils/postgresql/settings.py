@@ -1,10 +1,12 @@
-import asyncio
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine
+from src.config import PASSWORD_POSTGRES
 
 
 engine = create_async_engine(
-    "postgresql+asyncpg://scott:tiger@localhost/test",
-    echo=True,
+    f"postgresql+asyncpg://postgres:{PASSWORD_POSTGRES}@localhost/abtestapi",
+    echo=False
 )
