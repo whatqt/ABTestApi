@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from sqlalchemy.ext.asyncio import create_async_engine
-from back_end.config import PASSWORD_POSTGRES
+from config import PASSWORD_POSTGRES
 
 
 engine = create_async_engine(
