@@ -2,37 +2,93 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 import jwt
-import asyncio
+from asyncio import to_thread
 from back_end.config import ALGORITHM, PRIVATE_KEY_PAHT, PUBLIC_KEY_PAHT
+import bcrypt
 
 
-async def encode(
-    payload: dict,
-    private_key: str = PRIVATE_KEY_PAHT.read_text(),
-    algorithm: str = ALGORITHM
-):
 
-    encoded = await asyncio.to_thread(
-        jwt.encode,
-        payload=payload,
-        key=private_key,
-        algorithm=algorithm
-    )
+class JWToken:
+    '''выпуск токена и его расшифровка'''
+
+    def __init__(self, algorithm: str):
+        self.algorithm = algorithm
+
+    async def encode(
+        self,
+        payload: dict,
+        private_key: str = PRIVATE_KEY_PAHT.read_text(),
+    ) -> str:  
+        '''
+        выпускает токен с payload.
+
+        :param payload: Полезная нагрузка
+        :param private_key: Приватный ключ JWT
+        :return: выпуск JWT токена
+        '''
+        encoded = await to_thread(
+            jwt.encode,
+            payload=payload,
+            key=private_key,
+            algorithm=self.algorithm
+        )
+        
+        return encoded
+
+    async def decode(
+        self,
+        token: str | bytes,
+        public_key: str = PUBLIC_KEY_PAHT.read_text(),
+    ) -> dict:
+        '''
+        Расшифровывает токен и если токен действительный, то отдаёт payload
+
+        :param token: токен
+        :param public_key: публичный клюс
+        :return: payload
+        '''
+        decoded = await to_thread(
+            jwt.decode,
+            token,
+            public_key,
+            [self.algorithm]
+
+        )
+
+        return decoded
+
+class AuthPassword:
+    '''шифрует и проверяет пароль'''
+
+    async def crypto_password(self, password: str) -> bytes:
+        """
+        Шифрование пароля.
+
+        :param password: пароль
+        :return hashed: кэш пароля
+        """
+        psw_bytes = password.encode()
+        salt = await to_thread(bcrypt.gensalt)
+        hashed = await to_thread(bcrypt.hashpw, psw_bytes, salt)
+        return hashed
     
-    return encoded
+    async def validate_password(
+        self,
+        password: str, 
+        hashed: bytes
+    ) -> bool:
+        """
+        Проверка, совпадает ли пароль c кэшом.
 
-async def decode(
-    token: str | bytes,
-    public_key: str = PUBLIC_KEY_PAHT.read_text(),
-    algorithm: str = ALGORITHM
-):
-    decoded = await asyncio.to_thread(
-        jwt.decode,
-        token,
-        public_key,
-        [algorithm]
-
-    )
-    return decoded
-
-
+        :param password: пароль
+        :param hashed: кэш указанного пароля
+        :return is_valid: bool значение, которое указывает на валидность пароля
+        """
+        psw_bytes = password.encode()
+        is_valid = await to_thread(
+            bcrypt.checkpw, 
+            psw_bytes, 
+            hashed
+        )
+        return is_valid
+    
