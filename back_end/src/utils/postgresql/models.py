@@ -1,5 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, LargeBinary
 
 
 
@@ -10,4 +10,5 @@ class Users(Base):
 
     email = Column(String, primary_key=True, index=True)
     username = Column(String)
+    password = Column(LargeBinary)
 

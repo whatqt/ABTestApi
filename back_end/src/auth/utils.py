@@ -3,16 +3,17 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 import jwt
 from asyncio import to_thread
-from back_end.config import ALGORITHM, PRIVATE_KEY_PAHT, PUBLIC_KEY_PAHT
+from config import ALGORITHM, PRIVATE_KEY_PAHT, PUBLIC_KEY_PAHT
 import bcrypt
-
+from datetime import datetime, timedelta
 
 
 class JWToken:
     '''выпуск токена и его расшифровка'''
 
-    def __init__(self, algorithm: str):
+    def __init__(self, algorithm: str = "RS256"):
         self.algorithm = algorithm
+        self.accsess_token_exp = 3
 
     async def encode(
         self,
@@ -26,9 +27,16 @@ class JWToken:
         :param private_key: Приватный ключ JWT
         :return: выпуск JWT токена
         '''
+        to_encoded = payload.copy()
+        now = datetime.utcnow()
+        expire = now + timedelta(minutes=self.accsess_token_exp)
+        to_encoded.update(
+            exp=expire
+        )
+        
         encoded = await to_thread(
             jwt.encode,
-            payload=payload,
+            payload=to_encoded,
             key=private_key,
             algorithm=self.algorithm
         )
