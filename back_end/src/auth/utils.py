@@ -13,7 +13,7 @@ class JWToken:
 
     def __init__(self, algorithm: str = "RS256"):
         self.algorithm = algorithm
-        self.accsess_token_exp = 3
+        self.accsess_token_exp = 5
 
     async def encode(
         self,
@@ -27,16 +27,18 @@ class JWToken:
         :param private_key: Приватный ключ JWT
         :return: выпуск JWT токена
         '''
-        to_encoded = payload.copy()
+        to_payload = payload.copy()
         now = datetime.utcnow()
         expire = now + timedelta(minutes=self.accsess_token_exp)
-        to_encoded.update(
-            exp=expire
+        to_payload.update(
+            exp=expire,
+            iat=now
+
         )
         
         encoded = await to_thread(
             jwt.encode,
-            payload=to_encoded,
+            payload=to_payload,
             key=private_key,
             algorithm=self.algorithm
         )
