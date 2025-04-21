@@ -1,24 +1,43 @@
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).parent.parent.parent))
-from fastapi import FastAPI, Body, Depends, HTTPException
+from fastapi import (
+    FastAPI, Body, Depends,
+    HTTPException, status,
+    Response
+)
+from fastapi.security import HTTPBearer
+from fastapi.security import HTTPAuthorizationCredentials as HTTPAuthCredentials
 from fastapi.responses import JSONResponse
 from auth.utils import AuthPassword
 from utils.postgresql.managament.users import ManageUser
 from utils.postgresql.models import Users
 from auth.utils import JWToken
+from .depends_func import validate_auth_user
+from jwt.exceptions import InvalidTokenError
+
 
 
 app = FastAPI()
 
+
+
+# Зависимости
+async def get_jwt() -> JWToken:
+    return JWToken()
+
+async def get_auth_pswd() -> AuthPassword:
+    return AuthPassword()
 
 @app.get("/")
 async def index():
     return JSONResponse({"response": "ok"})
 
 @app.post("/create")
-async def create(data = Body()):
-    auth_password = AuthPassword()
+async def create(
+    data = Body(),
+    auth_password: AuthPassword = Depends(get_auth_pswd)
+):
     hash_password = await auth_password.crypto_password(data["password"])
     manage_user = ManageUser(
         data["email"],
@@ -29,39 +48,48 @@ async def create(data = Body()):
     user = await manage_user.create()
     return JSONResponse({"response": f"{user}"})
 
-
-async def validate_auth_user(data = Body()):
-    auth_password = AuthPassword()
-    manage_user = ManageUser(
-        data["email"],
-        None,
-        None
-    )
-    if (hash_password:= await manage_user.get_hash()):
-        is_valid = await auth_password.validate_password(
-            data["password"], hash_password
-        )
-        if is_valid:
-            user = await manage_user.get()
-            print(user)
-            if user:
-                return user
-    raise HTTPException(423, "Неверные данные")
-
 @app.post("/login")
-async def login(user: Users = Depends(validate_auth_user)):
+async def login(
+    response: Response, 
+    user: Users = Depends(validate_auth_user)
+):
     jwt_token = JWToken()
     jwt_payload = {
-        "sub": user.username,
+        "sub": user.email,
+        "username": user.username,
         "email": user.email,
     }
     print(jwt_payload)
-    token = await jwt_token.encode(
+    access_token = await jwt_token.encode(
         jwt_payload
     )
-    token_info = {
-        "token": token,
-        "type": "bearer"
-    }
-    print(token_info)
-    return token_info
+    content = {"status": "successfully"}
+    response.headers["Authorization"] = f"Bearer {access_token}"
+    return JSONResponse(
+        content=content,
+        status_code=status.HTTP_202_ACCEPTED,
+        headers=response.headers
+    )
+
+@app.post("/me")
+async def about_user(
+    cred: HTTPAuthCredentials = Depends(
+        HTTPBearer
+    ),
+    jwt_token: JWToken = Depends(
+        JWToken
+    )
+):
+    token = cred.credentials
+    try:
+        payload = await jwt_token.decode(token)
+    except InvalidTokenError as e:
+        print(e)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid token"
+        )
+    print(payload)
+    return JSONResponse(
+        payload
+    )
