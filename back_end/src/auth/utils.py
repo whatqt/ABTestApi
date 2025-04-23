@@ -8,34 +8,35 @@ import bcrypt
 from datetime import datetime, timedelta
 
 
+
 class JWToken:
     '''выпуск токена и его расшифровка'''
 
-    def __init__(self, algorithm: str = "RS256"):
-        self.algorithm = algorithm
-        self.accsess_token_exp = 5
+    def __init__(self):
+        self.algorithm = ALGORITHM
+        self.accsess_token_exp_minites= 5
+        self.refresh_token_exp_days = 30
 
-    async def encode(
+    async def __encode_token(
         self,
         payload: dict,
+        type_token: str,
         private_key: str = PRIVATE_KEY_PAHT.read_text(),
     ) -> str:  
-        '''
-        выпускает токен с payload.
-
-        :param payload: Полезная нагрузка
-        :param private_key: Приватный ключ JWT
-        :return: выпуск JWT токена
-        '''
+        
         to_payload = payload.copy()
         now = datetime.utcnow()
-        expire = now + timedelta(minutes=self.accsess_token_exp)
+        if type_token == "accsses":
+            expire = now + timedelta(minutes=self.accsess_token_exp_minites)
+        elif type_token == "refresh":
+            expire = now + timedelta(days=self.refresh_token_exp_days)
+        else:
+            raise ValueError("Неверный тип токена")
         to_payload.update(
+            type=type_token,
             exp=expire,
-            iat=now
-
+            iat=now,
         )
-        
         encoded = await to_thread(
             jwt.encode,
             payload=to_payload,
@@ -44,6 +45,39 @@ class JWToken:
         )
         
         return encoded
+
+    async def create_refresh_token(
+        self,
+        payload: dict,
+    ) -> str:
+        '''
+        выпускает refresh токен.
+
+        :param payload: Полезная нагрузка
+        :return: выпуск refresh токена
+        '''
+
+        return await self.__encode_token(
+            payload=payload,
+            type_token="refresh"
+        )
+    
+    async def create_accsses_token(
+        self, 
+        payload: dict,
+
+    ) -> str:
+        '''
+        выпускает accsses токен.
+
+        :param payload: Полезная нагрузка
+        :return: выпуск accsses токена
+        '''
+
+        return await self.__encode_token(
+            payload=payload,
+            type_token="accsses"
+        )
 
     async def decode(
         self,
@@ -57,6 +91,7 @@ class JWToken:
         :param public_key: публичный клюс
         :return: payload
         '''
+        
         decoded = await to_thread(
             jwt.decode,
             token,
@@ -66,39 +101,41 @@ class JWToken:
         )
 
         return decoded
+    
+class CryptoData:
+    '''шифрует и проверяет, валидные ли данные'''
 
-class AuthPassword:
-    '''шифрует и проверяет пароль'''
-
-    async def crypto_password(self, password: str) -> bytes:
+    async def crypto_data(self, data: str) -> bytes:
         """
-        Шифрование пароля.
+        Шифрование данных.
 
-        :param password: пароль
-        :return hashed: кэш пароля
+        :param data: данные
+        :return hashed: кэш данных
         """
-        psw_bytes = password.encode()
+        psw_bytes = data.encode()
         salt = await to_thread(bcrypt.gensalt)
         hashed = await to_thread(bcrypt.hashpw, psw_bytes, salt)
         return hashed
     
-    async def validate_password(
+    async def validate_data(
         self,
-        password: str, 
+        data: str, 
         hashed: bytes
     ) -> bool:
         """
-        Проверка, совпадает ли пароль c кэшом.
+        Проверка, совпадает ли данные c кэшом.
 
-        :param password: пароль
-        :param hashed: кэш указанного пароля
-        :return is_valid: bool значение, которое указывает на валидность пароля
+        :param data: данные
+        :param hashed: кэш данных
+        :return is_valid: bool значение. True - данные валидные, False - данные невалидные
         """
-        psw_bytes = password.encode()
+
+        psw_bytes = data.encode()
         is_valid = await to_thread(
             bcrypt.checkpw, 
             psw_bytes, 
             hashed
         )
         return is_valid
+    
     

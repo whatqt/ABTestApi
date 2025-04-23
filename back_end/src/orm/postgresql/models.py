@@ -11,4 +11,5 @@ class Users(Base):
     email = Column(String, primary_key=True, index=True)
     username = Column(String)
     password = Column(LargeBinary)
+    jwt_refresh_token = Column(String, nullable=True)
 
