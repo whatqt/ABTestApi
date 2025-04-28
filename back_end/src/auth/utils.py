@@ -14,7 +14,7 @@ class JWToken:
 
     def __init__(self):
         self.algorithm = ALGORITHM
-        self.accsess_token_exp_minites= 5
+        self.accsess_token_exp_minites = 20
         self.refresh_token_exp_days = 30
 
     async def __encode_token(

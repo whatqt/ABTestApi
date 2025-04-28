@@ -63,7 +63,7 @@ async def login(
             detail="access is denied"
         )
     payload = {
-        "sub": user.id,
+        "sub": str(user.id),
         "username": user.username,
         "email": user.email,
     }
@@ -71,7 +71,7 @@ async def login(
         payload
     )
     refresh_token = await jwt_token.create_refresh_token(
-        {"sub": user.id}
+        {"sub": str(user.id)}
     )
     await ManageUser.save_refresh_token(user, refresh_token)
     response = JSONResponse(
@@ -84,14 +84,37 @@ async def login(
         value=refresh_token,
         httponly=True
     )
-    print(user)
     response.set_cookie(
         key="email",
-        value= user.email,
+        value=user.email,
         httponly=True
     )
-
     return response
+
+@app.post("/logout")
+async def logout(
+    refresh_token = Cookie(default=None),
+    email = Cookie(default=None),
+):
+    if refresh_token or email:
+        response = JSONResponse(
+            content={"message": "successfully"},
+            status_code=status.HTTP_202_ACCEPTED,
+        )
+        response.delete_cookie(
+            key="refresh_token",
+            httponly=True
+        )
+        response.delete_cookie(
+            key="email",
+            httponly=True
+        )
+        return response
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="access is denied"
+    )
+    
 
 @app.post("/refresh")
 async def refresh(
@@ -107,12 +130,11 @@ async def refresh(
         if payload:
             user = await manage_user.get(email)
             payload = {
-                "sub": user.email,
+                "sub": str(user.id),
                 "username": user.username,
                 "email": user.email,
             }
             access_token = await jwt_token.create_accsses_token(payload)
-            print(access_token)
             response = JSONResponse(
                 content={"status": "retry"},
                 status_code=status.HTTP_202_ACCEPTED,
@@ -139,6 +161,7 @@ async def about_user(
     except ExpiredSignatureError as e:
         return RedirectResponse("/registration/refresh")
     except InvalidTokenError as e:
+        print(e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid token"
