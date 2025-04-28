@@ -1,5 +1,5 @@
-from src.utils.postgresql.models import Base
-from src.utils.postgresql.settings import engine
+from src.orm.postgresql.models import Base
+from src.orm.postgresql.settings import engine
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 

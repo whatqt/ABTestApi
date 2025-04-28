@@ -63,16 +63,15 @@ async def login(
             detail="access is denied"
         )
     payload = {
-        "sub": user.email,
+        "sub": user.id,
         "username": user.username,
         "email": user.email,
     }
     access_token = await jwt_token.create_accsses_token(
         payload
     )
-    print(access_token)
     refresh_token = await jwt_token.create_refresh_token(
-        {"sub": user.email}
+        {"sub": user.id}
     )
     await ManageUser.save_refresh_token(user, refresh_token)
     response = JSONResponse(
@@ -138,15 +137,12 @@ async def about_user(
     try:
         payload = await jwt_token.decode(token)
     except ExpiredSignatureError as e:
-        # будет перевыпуск токена при помощи рефреш токена
         return RedirectResponse("/registration/refresh")
     except InvalidTokenError as e:
-        print(e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid token"
         )
-    print(payload)
     return JSONResponse(
         payload
     )
