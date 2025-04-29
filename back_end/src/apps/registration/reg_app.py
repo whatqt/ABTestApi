@@ -135,6 +135,7 @@ async def refresh(
                 "email": user.email,
             }
             access_token = await jwt_token.create_accsses_token(payload)
+            print(f"Bearer {access_token}")
             response = JSONResponse(
                 content={"status": "retry"},
                 status_code=status.HTTP_202_ACCEPTED,
