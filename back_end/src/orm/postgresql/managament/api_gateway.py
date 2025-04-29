@@ -29,22 +29,27 @@ class ManageAPIGateway:
     
     async def get(
         self, 
-        id_record: int = None
+        id_record: int = 0
     ):
         async with AsyncSession(
             autoflush=False, 
-            bing=engine,
+            bind=engine,
             expire_on_commit=False
         ) as session:
-            if id_record:
+            if id_record != 0:
                 result = await session.execute(
                     select(APIGateway).where(
-                        APIGateway.id==id
+                        APIGateway.id==id_record
                     )
                 )
+                return result.scalar_one_or_none()
+
             else:
                 result = await session.execute(
-                    select(APIGateway)
+                    select(APIGateway).where(
+                        APIGateway.user_id==self.user_id
+                    )
                 )
-            return result
+                return result.fetchall()
+
         

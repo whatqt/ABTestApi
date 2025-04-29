@@ -15,6 +15,11 @@ class Users(Base):
     jwt_refresh_token = Column(String, nullable=True)
 
 class APIGateway(Base):
+    '''
+    Модель, где пользователь выбирает основную точку 
+    и две, куда пойдут запросы, на которых и будет построен анализ
+    '''
+
     __tablename__ = "api_gateway"
 
     id = Column(Integer, primary_key=True, index=True)

@@ -116,6 +116,7 @@ async def logout(
     )
     
 
+@app.get("/refresh")
 @app.post("/refresh")
 async def refresh(
     refresh_token = Cookie(default=None),

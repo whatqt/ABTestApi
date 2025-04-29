@@ -33,7 +33,6 @@ async def jwt(
     try:
         token = authorization.split(" ")[1]
         payload = await JWToken().decode(token)
-        print(request.scope)
         request.state.payload = payload
         result = await call_next(request)
         return result
@@ -56,19 +55,39 @@ async def multi_handler(request: Request, exc: Exception):
         content="server error"
     )
 
-@app.post("/")
+@app.get("/records/{id_record}")
+async def get(
+    request: Request,
+    id_record: int = 0,
+):
+    user_id = int(request.state.payload["sub"])
+    api_gateway = ManageAPIGateway(
+        user_id=user_id
+    )
+    data = await api_gateway.get(id_record)
+    return JSONResponse("test")
+
+    return JSONResponse(
+        content=data,
+    )
+    
+
+
+@app.post("/create")
 async def create_test(
     request: Request,
     data = Depends(
         validate_data_from_create_test
     ),
 ):  
-    # print(request.state.user)
-    # payload: dict = request.state.payload
-    # api_gateway = ManageAPIGateway(
-    #     id=int(payload["sub"])
-    # )
-    # await api_gateway.create(
-
-    # )
+    print(request.state.payload)
+    payload: dict = request.state.payload
+    api_gateway = ManageAPIGateway(
+        user_id=int(payload["sub"])
+    )
+    print(data)
+    await api_gateway.create(
+        data
+    )
     return JSONResponse("test")
+
