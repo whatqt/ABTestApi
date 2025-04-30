@@ -12,6 +12,7 @@ async def validate_data_from_create_test(body = Body()):
     if all(key in body for key in required_keys):
         logger.debug("Проверка успешно пройдена")
         return body
+    logger.debug("Проверка не пройдена")
     raise HTTPException(
         status_code=status.HTTP_406_NOT_ACCEPTABLE, 
         detail="incorrect data"

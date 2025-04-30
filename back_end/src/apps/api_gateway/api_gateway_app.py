@@ -14,6 +14,9 @@ from auth.utils import JWToken
 from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
 from orm.postgresql.managament.api_gateway import ManageAPIGateway
 from utils.logger import logger
+from back_end.src.utils.alchemy_encoder import AlchemyEncoder
+import json
+
 
 
 app = FastAPI()
@@ -65,10 +68,9 @@ async def get(
         user_id=user_id
     )
     data = await api_gateway.get(id_record)
-    return JSONResponse("test")
-
+    json_data = json.dumps(data, cls=AlchemyEncoder)
     return JSONResponse(
-        content=data,
+        content=json_data,
     )
     
 
@@ -80,12 +82,10 @@ async def create_test(
         validate_data_from_create_test
     ),
 ):  
-    print(request.state.payload)
     payload: dict = request.state.payload
     api_gateway = ManageAPIGateway(
         user_id=int(payload["sub"])
     )
-    print(data)
     await api_gateway.create(
         data
     )

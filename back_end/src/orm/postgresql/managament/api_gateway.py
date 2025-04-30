@@ -50,6 +50,11 @@ class ManageAPIGateway:
                         APIGateway.user_id==self.user_id
                     )
                 )
-                return result.fetchall()
+                data = result.scalars().all()
+                if not data:
+                    return None
+                # for a in result.scalars():
+                #     print(a.id)
+                return data
 
         
