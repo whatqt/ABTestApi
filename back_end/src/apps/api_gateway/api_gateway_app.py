@@ -4,18 +4,15 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from fastapi import (
     FastAPI, Request,
     HTTPException, status,
-    Body, Depends, 
+    Depends, 
 )
-from fastapi.security import HTTPAuthorizationCredentials as HTTPAuthCredentials
-from fastapi.security import HTTPBearer
 from fastapi.responses import JSONResponse, RedirectResponse
 from .depends_func import validate_data_from_create_test
 from auth.utils import JWToken
-from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
-from orm.postgresql.managament.api_gateway import ManageAPIGateway
+from jwt.exceptions import ExpiredSignatureError
 from utils.logger import logger
-from back_end.src.utils.alchemy_encoder import AlchemyEncoder
-import json
+from src.utils.alchemy_encoder import AlchemyEncoder
+from src.orm.mongodb.managament.api_gateway import ManageAPIGateway
 
 
 
@@ -58,23 +55,23 @@ async def multi_handler(request: Request, exc: Exception):
         content="server error"
     )
 
-@app.get("/records/{id_record}")
+@app.get("/records/{main_api}")
+@app.get("/records")
 async def get(
     request: Request,
-    id_record: int = 0,
+    main_api: str = None,
 ):
-    user_id = int(request.state.payload["sub"])
+    user_id = request.state.payload["sub"]
     api_gateway = ManageAPIGateway(
-        user_id=user_id
+        id_user=user_id
     )
-    data = await api_gateway.get(id_record)
-    json_data = json.dumps(data, cls=AlchemyEncoder)
+    data = await api_gateway.get(
+        main_api=main_api
+    )
     return JSONResponse(
-        content=json_data,
+        content=data,
     )
     
-
-
 @app.post("/create")
 async def create_test(
     request: Request,
@@ -82,12 +79,27 @@ async def create_test(
         validate_data_from_create_test
     ),
 ):  
+    
     payload: dict = request.state.payload
     api_gateway = ManageAPIGateway(
-        user_id=int(payload["sub"])
+        id_user=payload["sub"]
     )
-    await api_gateway.create(
-        data
+    result = await api_gateway.insert_data(
+        data=data
     )
-    return JSONResponse("test")
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"на url {data["main_api"]!r} уже есть конфигурация"
+        )
+    return JSONResponse(
+        content="Successfully created",
+        status_code=status.HTTP_201_CREATED
+    )
 
+
+
+    
+
+            
+        

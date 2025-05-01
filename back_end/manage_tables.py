@@ -2,7 +2,7 @@ from src.orm.postgresql.models import Base
 from src.orm.postgresql.settings import engine
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-
+from src.orm.mongodb.settings import client
 
 async def create_tables() -> None:
     '''создаёт таблицы'''

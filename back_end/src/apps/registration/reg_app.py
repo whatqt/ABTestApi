@@ -4,7 +4,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from fastapi import (
     FastAPI, Body, Depends,
     HTTPException, status,
-    Response, Cookie, 
+    Request, Cookie,
 )
 from fastapi.security import HTTPBearer
 from fastapi.security import HTTPAuthorizationCredentials as HTTPAuthCredentials
@@ -119,12 +119,13 @@ async def logout(
 @app.get("/refresh")
 @app.post("/refresh")
 async def refresh(
+    request: Request,
     refresh_token = Cookie(default=None),
     email = Cookie(default=None),
     manage_user: ManageUser = Depends(ManageUser),
     jwt_token: JWToken = Depends(
         JWToken
-    ),    
+    ),
 ):
     if refresh_token and email:
         payload = await jwt_token.decode(refresh_token)
@@ -150,13 +151,14 @@ async def refresh(
 
 @app.post("/me")
 async def about_user(
+    request: Request,
     cred: HTTPAuthCredentials = Depends(
         HTTPBearer()
     ),
     jwt_token: JWToken = Depends(
         JWToken
     ),    
-):
+):  
     token = cred.credentials
     try:
         payload = await jwt_token.decode(token)
