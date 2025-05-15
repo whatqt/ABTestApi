@@ -15,6 +15,7 @@ from orm.postgresql.models import Users
 from auth.utils import JWToken
 from .depends_func import validate_auth_user
 from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
+from utils.logger import logger
 
 
 
@@ -119,7 +120,6 @@ async def logout(
 @app.get("/refresh")
 @app.post("/refresh")
 async def refresh(
-    request: Request,
     refresh_token = Cookie(default=None),
     email = Cookie(default=None),
     manage_user: ManageUser = Depends(ManageUser),
@@ -137,13 +137,14 @@ async def refresh(
                 "email": user.email,
             }
             access_token = await jwt_token.create_accsses_token(payload)
-            print(f"Bearer {access_token}")
+            print(f"Bearer {access_token}") # для быстрого копирования токена в postman
             response = JSONResponse(
                 content={"status": "retry"},
                 status_code=status.HTTP_202_ACCEPTED,
                 headers={"Authorization": f"Bearer {access_token}"}
-            )
+            )   
             return response
+    logger.debug("Неверные данные/отсутствие при запросе нового access токена")
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail=f"Invalid token"

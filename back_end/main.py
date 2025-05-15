@@ -1,7 +1,3 @@
-
-
-
-
 if __name__ == "__main__":
     import uvicorn
     from src.utils.logger import logger

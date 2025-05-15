@@ -7,20 +7,37 @@ from fastapi import (
     Depends, 
 )
 from fastapi.responses import JSONResponse, RedirectResponse
-from .depends_func import validate_data_from_create_test
+from .depends_func import validate_data_from_create_test, _validate_url, get_settings_url
 from auth.utils import JWToken
 from jwt.exceptions import ExpiredSignatureError
 from utils.logger import logger
 from src.utils.alchemy_encoder import AlchemyEncoder
 from src.orm.mongodb.managament.api_gateway import ManageAPIGateway
-
-
+from fastapi import FastAPI, Request
+import time
+import random
 
 app = FastAPI()
 
+async def get_jwt() -> JWToken:
+    return JWToken()
+
+# @app.middleware("http")
+# async def monitor_requests(request: Request, call_next):
+#     start_time = time.perf_counter()
+    
+
+#     response = await call_next(request)
+    
+#     end_time = time.perf_counter() - start_time
+#     print(end_time)
+
+
+#     return response
+
 @app.middleware("http")
 async def jwt(
-    request: Request, call_next: callable
+    request: Request, call_next: callable,
 ):
     authorization = request.headers.get(
         "Authorization", None
@@ -84,7 +101,7 @@ async def create_test(
     api_gateway = ManageAPIGateway(
         id_user=payload["sub"]
     )
-    result = await api_gateway.insert_data(
+    result = await api_gateway.create_data(
         data=data
     )
     if not result:
@@ -93,13 +110,39 @@ async def create_test(
             detail=f"на url {data["main_api"]!r} уже есть конфигурация"
         )
     return JSONResponse(
-        content="Successfully created",
+        content={"status": "Successfully created"},
         status_code=status.HTTP_201_CREATED
     )
 
+@app.post("/firts_api_for_test") # чужой ответ
+async def firts_api_for_test():
+    return JSONResponse("Привет")
 
+@app.post("/second_api_for_test") # чужой ответ
+async def second_api_for_test():
+    return JSONResponse("Пока")
 
+@app.post("/test") # якобы чужая ручка
+async def test(request: Request):
+    return RedirectResponse(
+        "query_separator"
+    )
+
+@app.post("/query_separator")
+async def query_separator(
+    request: Request, 
+    validate_url = Depends(_validate_url),
+    settings_url: dict = Depends(get_settings_url)
+):
+    current_url_number = random.randrange(0, 2)
+    if current_url_number == 0:
+        response_url = settings_url["first_api_response"]
+        # функцияд для обработки данных
+    else:
+        response_url = settings_url["second_api_response"]
+        # функцияд для обработки данных
     
+    return RedirectResponse(response_url)
 
             
         
