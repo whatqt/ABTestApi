@@ -1,4 +1,4 @@
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, mapped_column, relationship
 from sqlalchemy import Column, String, LargeBinary, Integer, ForeignKey
 
 
@@ -8,22 +8,15 @@ class Base(DeclarativeBase): pass
 class Users(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = mapped_column(Integer, primary_key=True, index=True)
     email = Column(String, index=True)
     username = Column(String)
     password = Column(LargeBinary)
     jwt_refresh_token = Column(String, nullable=True)
 
-class APIGateway(Base):
-    '''
-    Модель, где пользователь выбирает основную точку 
-    и две, куда пойдут запросы, на которых и будет построен анализ
-    '''
+class WhiteListUrls(Base):
+    __tablename__ = "white_list_urls"
 
-    __tablename__ = "api_gateway"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True)
-    main_api = Column(String)
-    first_api = Column(String)
-    second_api = Column(String)
+    url = Column(String, primary_key=True, index=True)
+    user_id = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    user = relationship("Users")

@@ -24,9 +24,6 @@ app = FastAPI()
 
 
 # Зависимости
-async def get_jwt() -> JWToken:
-    return JWToken()
-
 async def get_crypto_data() -> CryptoData:
     return CryptoData()
 
@@ -110,7 +107,9 @@ async def logout(
             key="email",
             httponly=True
         )
+        logger.debug("Пользователь вышел")
         return response
+
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="access is denied"
@@ -130,7 +129,7 @@ async def refresh(
     if refresh_token and email:
         payload = await jwt_token.decode(refresh_token)
         if payload:
-            user = await manage_user.get(email)
+            user = await manage_user.get_by_email(email)
             payload = {
                 "sub": str(user.id),
                 "username": user.username,
@@ -144,6 +143,7 @@ async def refresh(
                 headers={"Authorization": f"Bearer {access_token}"}
             )   
             return response
+        
     logger.debug("Неверные данные/отсутствие при запросе нового access токена")
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -166,7 +166,6 @@ async def about_user(
     except ExpiredSignatureError as e:
         return RedirectResponse("/registration/refresh")
     except InvalidTokenError as e:
-        print(e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid token"

@@ -7,33 +7,20 @@ from fastapi import (
     Depends, 
 )
 from fastapi.responses import JSONResponse, RedirectResponse
-from .depends_func import validate_data_from_create_test, _validate_url, get_settings_url
+from .depends_func import validate_data_from_create_test, get_settings_url, check_url_in_white_list
 from auth.utils import JWToken
 from jwt.exceptions import ExpiredSignatureError
 from utils.logger import logger
-from src.utils.alchemy_encoder import AlchemyEncoder
 from src.orm.mongodb.managament.api_gateway import ManageAPIGateway
+from src.orm.postgresql.managament.white_list_urls import ManageWhiteListUrls
+from src.orm.postgresql.managament.users import ManageUser
+
 from fastapi import FastAPI, Request
 import time
 import random
 
+
 app = FastAPI()
-
-async def get_jwt() -> JWToken:
-    return JWToken()
-
-# @app.middleware("http")
-# async def monitor_requests(request: Request, call_next):
-#     start_time = time.perf_counter()
-    
-
-#     response = await call_next(request)
-    
-#     end_time = time.perf_counter() - start_time
-#     print(end_time)
-
-
-#     return response
 
 @app.middleware("http")
 async def jwt(
@@ -43,20 +30,22 @@ async def jwt(
         "Authorization", None
     )
     if not authorization:
+        logger.debug("invalid token")
         return JSONResponse(
             content="invalid token",
             status_code=status.HTTP_403_FORBIDDEN
         ) 
+    jwt_token = JWToken()
     try:
         token = authorization.split(" ")[1]
-        payload = await JWToken().decode(token)
+        payload = await jwt_token.decode(token)
         request.state.payload = payload
         result = await call_next(request)
         return result
     except ExpiredSignatureError:
         logger.debug("accses токен истёк")
         return RedirectResponse("/registration/refresh")
-
+    
 @app.exception_handler(Exception)
 async def multi_handler(request: Request, exc: Exception):
     name_handler = request.scope.get("route", None)
@@ -82,13 +71,20 @@ async def get(
     api_gateway = ManageAPIGateway(
         id_user=user_id
     )
-    data = await api_gateway.get(
-        main_api=main_api
-    )
+    if main_api:
+        data = await api_gateway.get(
+            main_api=main_api
+        )
+    else:
+        data = await api_gateway.get_all_main_api()
+    content = {
+        "data": data
+    }
     return JSONResponse(
-        content=data,
+        content=content,
     )
-    
+
+
 @app.post("/create")
 async def create_test(
     request: Request,
@@ -96,15 +92,20 @@ async def create_test(
         validate_data_from_create_test
     ),
 ):  
-    
     payload: dict = request.state.payload
+    id_user = payload["sub"]
+    user = await ManageUser.get_by_id(int(id_user))
     api_gateway = ManageAPIGateway(
-        id_user=payload["sub"]
+        id_user=id_user
     )
-    result = await api_gateway.create_data(
+    result_mongodb = await api_gateway.create_data(
         data=data
     )
-    if not result:
+    result_postgres = await ManageWhiteListUrls.create(
+        url=data["main_api"],
+        user=user
+    )
+    if not result_mongodb or not result_postgres:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"на url {data["main_api"]!r} уже есть конфигурация"
@@ -114,35 +115,7 @@ async def create_test(
         status_code=status.HTTP_201_CREATED
     )
 
-@app.post("/firts_api_for_test") # чужой ответ
-async def firts_api_for_test():
-    return JSONResponse("Привет")
 
-@app.post("/second_api_for_test") # чужой ответ
-async def second_api_for_test():
-    return JSONResponse("Пока")
-
-@app.post("/test") # якобы чужая ручка
-async def test(request: Request):
-    return RedirectResponse(
-        "query_separator"
-    )
-
-@app.post("/query_separator")
-async def query_separator(
-    request: Request, 
-    validate_url = Depends(_validate_url),
-    settings_url: dict = Depends(get_settings_url)
-):
-    current_url_number = random.randrange(0, 2)
-    if current_url_number == 0:
-        response_url = settings_url["first_api_response"]
-        # функцияд для обработки данных
-    else:
-        response_url = settings_url["second_api_response"]
-        # функцияд для обработки данных
-    
-    return RedirectResponse(response_url)
 
             
         

@@ -88,7 +88,7 @@ class JWToken:
         Расшифровывает токен и если токен действительный, то отдаёт payload
 
         :param token: токен
-        :param public_key: публичный клюс
+        :param public_key: публичный ключ
         :return: payload
         '''
         
