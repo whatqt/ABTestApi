@@ -14,7 +14,7 @@ class JWToken:
 
     def __init__(self):
         self.algorithm = ALGORITHM
-        self.accsess_token_exp_minites= 5
+        self.accsess_token_exp_minites = 20
         self.refresh_token_exp_days = 30
 
     async def __encode_token(
@@ -88,7 +88,7 @@ class JWToken:
         Расшифровывает токен и если токен действительный, то отдаёт payload
 
         :param token: токен
-        :param public_key: публичный клюс
+        :param public_key: публичный ключ
         :return: payload
         '''
         

@@ -5,7 +5,7 @@ from orm.postgresql.managament.users import ManageUser
 
 async def validate_auth_user(data = Body()):
     auth_password = CryptoData()
-    user = await ManageUser.get(data["email"])
+    user = await ManageUser.get_by_email(data["email"])
     if user:
         if (hash_password:= user.password):
             is_valid = await auth_password.validate_data(

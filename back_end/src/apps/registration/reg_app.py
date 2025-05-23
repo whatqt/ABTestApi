@@ -4,7 +4,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from fastapi import (
     FastAPI, Body, Depends,
     HTTPException, status,
-    Response, Cookie, 
+    Request, Cookie,
 )
 from fastapi.security import HTTPBearer
 from fastapi.security import HTTPAuthorizationCredentials as HTTPAuthCredentials
@@ -15,6 +15,7 @@ from orm.postgresql.models import Users
 from auth.utils import JWToken
 from .depends_func import validate_auth_user
 from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
+from utils.logger import logger
 
 
 
@@ -23,9 +24,6 @@ app = FastAPI()
 
 
 # Зависимости
-async def get_jwt() -> JWToken:
-    return JWToken()
-
 async def get_crypto_data() -> CryptoData:
     return CryptoData()
 
@@ -63,16 +61,15 @@ async def login(
             detail="access is denied"
         )
     payload = {
-        "sub": user.email,
+        "sub": str(user.id),
         "username": user.username,
         "email": user.email,
     }
     access_token = await jwt_token.create_accsses_token(
         payload
     )
-    print(access_token)
     refresh_token = await jwt_token.create_refresh_token(
-        {"sub": user.email}
+        {"sub": str(user.id)}
     )
     await ManageUser.save_refresh_token(user, refresh_token)
     response = JSONResponse(
@@ -85,15 +82,41 @@ async def login(
         value=refresh_token,
         httponly=True
     )
-    print(user)
     response.set_cookie(
         key="email",
-        value= user.email,
+        value=user.email,
         httponly=True
     )
-
     return response
 
+@app.post("/logout")
+async def logout(
+    refresh_token = Cookie(default=None),
+    email = Cookie(default=None),
+):
+    if refresh_token or email:
+        response = JSONResponse(
+            content={"message": "successfully"},
+            status_code=status.HTTP_202_ACCEPTED,
+        )
+        response.delete_cookie(
+            key="refresh_token",
+            httponly=True
+        )
+        response.delete_cookie(
+            key="email",
+            httponly=True
+        )
+        logger.debug("Пользователь вышел")
+        return response
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="access is denied"
+    )
+    
+
+@app.get("/refresh")
 @app.post("/refresh")
 async def refresh(
     refresh_token = Cookie(default=None),
@@ -101,25 +124,27 @@ async def refresh(
     manage_user: ManageUser = Depends(ManageUser),
     jwt_token: JWToken = Depends(
         JWToken
-    ),    
+    ),
 ):
     if refresh_token and email:
         payload = await jwt_token.decode(refresh_token)
         if payload:
-            user = await manage_user.get(email)
+            user = await manage_user.get_by_email(email)
             payload = {
-                "sub": user.email,
+                "sub": str(user.id),
                 "username": user.username,
                 "email": user.email,
             }
             access_token = await jwt_token.create_accsses_token(payload)
-            print(access_token)
+            print(f"Bearer {access_token}") # для быстрого копирования токена в postman
             response = JSONResponse(
                 content={"status": "retry"},
                 status_code=status.HTTP_202_ACCEPTED,
                 headers={"Authorization": f"Bearer {access_token}"}
-            )
+            )   
             return response
+        
+    logger.debug("Неверные данные/отсутствие при запросе нового access токена")
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail=f"Invalid token"
@@ -127,26 +152,24 @@ async def refresh(
 
 @app.post("/me")
 async def about_user(
+    request: Request,
     cred: HTTPAuthCredentials = Depends(
         HTTPBearer()
     ),
     jwt_token: JWToken = Depends(
         JWToken
     ),    
-):
+):  
     token = cred.credentials
     try:
         payload = await jwt_token.decode(token)
     except ExpiredSignatureError as e:
-        # будет перевыпуск токена при помощи рефреш токена
         return RedirectResponse("/registration/refresh")
     except InvalidTokenError as e:
-        print(e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid token"
         )
-    print(payload)
     return JSONResponse(
         payload
     )

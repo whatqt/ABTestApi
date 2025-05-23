@@ -4,3 +4,4 @@ __pycache__
 .env
 shit
 certs
+test_server/
