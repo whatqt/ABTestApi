@@ -7,7 +7,7 @@ from fastapi import (
     Depends, 
 )
 from fastapi.responses import JSONResponse, RedirectResponse
-from .depends_func import validate_data_from_create_test, get_settings_url, check_url_in_white_list
+from .depends_func import validate_data_from_create, get_settings_url, check_url_in_white_list
 from auth.utils import JWToken
 from jwt.exceptions import ExpiredSignatureError
 from utils.logger import logger
@@ -89,7 +89,7 @@ async def get(
 async def create_test(
     request: Request,
     data = Depends(
-        validate_data_from_create_test
+        validate_data_from_create
     ),
 ):  
     payload: dict = request.state.payload
