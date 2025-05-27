@@ -27,8 +27,7 @@ class ManageAPIGateway(Settings):
                 "latency": None,
                 #server
                 "busyness_cpu": None,
-                "memory": None,
-                "i/o": None,
+                "memory_byte": None,
             }
             result = await self.collection.insert_one(
                 {
@@ -38,8 +37,6 @@ class ManageAPIGateway(Settings):
                     "first_api_response": data["first_api_response"],
                     "second_api_percent": data["second_api_percent"],
                     "second_api_response": data["second_api_response"],
-                    "successful_logins": None,
-                    "unsuccessful_logins": None,
                     "statistics_first_api": statistics,
                     "statistics_second_api": statistics
                 }
@@ -63,16 +60,16 @@ class ManageAPIGateway(Settings):
         return result
     
 class SaveCollections(Settings):
-    def __init__(self, id_user: str):
+    def __init__(self, id_user: str, main_api: str):
         super().__init__(id_user)
+        self.main_api = main_api
 
-    async def save_time_request(
-        self, 
-        main_api: str, 
-        time_: str,
-        response_url: str
+
+    async def __abstract_save_statistic(
+        self, response_url: str,
+        value, type_stat
     ):
-        filter_ = {"_id": main_api}
+        filter_ = {"_id": self.main_api}
         data: dict = await self.collection.find_one(
             filter_
         )
@@ -84,7 +81,8 @@ class SaveCollections(Settings):
         else:
             statistics: dict = data["statistics_second_api"]
             name_statistics = "statistics_second_api"
-        statistics["latency"] = time_
+
+        statistics[type_stat] = value
         new_data = data.copy()
         new_data[name_statistics] = statistics
         await self.collection.update_one(
@@ -92,3 +90,42 @@ class SaveCollections(Settings):
             {"$set": new_data}
         )
         return True
+    
+    async def save_time_request(
+        self, 
+        time_: str,
+        response_url: str,
+        _type_stat: str = "latency"
+    ):  
+        result = await self.__abstract_save_statistic(
+            response_url,
+            time_,
+            _type_stat
+        )
+        return result
+
+    async def save_memory(
+        self,
+        value,
+        response_url,
+        _type_stat: str = "memory"
+    ):
+        result = await self.__abstract_save_statistic(
+            response_url,
+            value,
+            _type_stat
+        )
+        return result
+    
+    async def save_busyness_cpu(
+        self,
+        value,
+        response_url,
+        _type_stat: str = "busyness_cpu"
+    ):
+        result = await self.__abstract_save_statistic(
+            response_url,
+            value,
+            _type_stat
+        )
+        return result

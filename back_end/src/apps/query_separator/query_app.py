@@ -17,6 +17,8 @@ import random
 import aiohttp
 from json import loads
 from .deepends_func import check_redirect
+import psutil
+import tracemalloc
 
 
 
@@ -37,19 +39,49 @@ async def check_url_in_white_list(
     return obj_url
 
 async def save_time_request(
-    id_user,
-    main_api,
-    time_,
-    response_url
+    id_user: str,
+    main_api: str,
+    time_: float,
+    response_url: str
 ):
-    save_collection = SaveCollections(id_user)
+    save_collection = SaveCollections(
+        id_user, main_api
+    )
     await save_collection.save_time_request(
-        main_api,
         time_,
         response_url
     )
     logger.debug("latency был сохранён")
 
+async def save_memory(
+    id_user: str,
+    main_api: str,
+    memory: int,
+    response_url: str
+):
+    save_collection = SaveCollections(
+        id_user, main_api
+    )
+    await save_collection.save_memory(
+        memory,
+        response_url
+    )
+    logger.debug("кол-во использованной памяти было сохранено")
+    
+async def save_busyness_cpu(
+    id_user: str,
+    main_api: str,
+    value: int,
+    response_url: str
+):
+    save_collection = SaveCollections(
+        id_user, main_api
+    )
+    await save_collection.save_busyness_cpu(
+        value,
+        response_url
+    )
+    logger.debug("значение загрузки ЦП было сохранено")
 
 @app.post("/query_separator")
 @app.get("/query_separator")
@@ -67,16 +99,39 @@ async def query_separator(
             response_url = settings_url["first_api_response"]
         case 1:
             response_url = settings_url["second_api_response"]
+    cpu_before = psutil.cpu_percent(interval=1)
+    tracemalloc.start()  # Включаем отслеживание памяти
     start_time = time.perf_counter()
     async with aiohttp.ClientSession() as session:
         async with session.get(url=response_url) as response:
             response_text = await response.text()
     end_time = time.perf_counter() - start_time
+    current, peak = tracemalloc.get_traced_memory()
+    cpu_after = psutil.cpu_percent(interval=1)
+    difference_cpu = cpu_after - cpu_before
+    logger.debug(cpu_after)
+    logger.debug(cpu_before)
+    logger.debug(difference_cpu)
     back_task.add_task(
         save_time_request,
         id_user,
         main_api,
         end_time,
+        response_url
+    )
+    back_task.add_task(
+        save_memory,
+        id_user,
+        main_api,
+        current,
+        response_url
+    )
+
+    back_task.add_task(
+        save_busyness_cpu,
+        id_user,
+        main_api,
+        difference_cpu,
         response_url
     )
     return loads(response_text)
