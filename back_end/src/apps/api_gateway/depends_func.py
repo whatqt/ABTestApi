@@ -10,7 +10,7 @@ from orm.mongodb.managament.api_gateway import ManageAPIGateway
 from orm.postgresql.managament.white_list_urls import ManageWhiteListUrls
 
 
-async def validate_data_from_create_test(body = Body()):
+async def validate_data_from_create(body = Body()):
     logger.debug(body)
     required_keys = [
         "main_api", 

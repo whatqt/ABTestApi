@@ -6,12 +6,17 @@ from pymongo.errors import DuplicateKeyError
 from src.utils.logger import logger
 
 
-class ManageAPIGateway:
+
+class Settings:
     def __init__(self, id_user: str):
         self.db = client["abtestapi"]
         self.id_user = id_user
         self.collection = self.db[self.id_user]
 
+class ManageAPIGateway(Settings):
+    def __init__(self, id_user: str):
+        super().__init__(id_user)
+        
     async def create_data(
         self, 
         data: dict, 
@@ -57,28 +62,33 @@ class ManageAPIGateway:
         )
         return result
     
-    async def increase_logins(
-            self, 
-            main_api: str,
-            _type: str,
-            
-        ) -> None:
-        '''
-        сделать документацию
-        '''
-        if _type not in ("successful_logins", "unsuccessful_logins"):
-            raise ValueError("_type должен быть successful_logins или unsuccessful_logins")
-        data = await self.collection.find_one(
-            {"_id": main_api}
-        )
-        old_value = data[_type]
-        if old_value is None:
-            old_value = 0
+class SaveCollections(Settings):
+    def __init__(self, id_user: str):
+        super().__init__(id_user)
 
-        new_value = old_value + 1
-        result = await self.collection.update_one(
-            {"_id": main_api},
-            {"$set": {_type: new_value}}
+    async def save_time_request(
+        self, 
+        main_api: str, 
+        time_: str,
+        response_url: str
+    ):
+        filter_ = {"_id": main_api}
+        data: dict = await self.collection.find_one(
+            filter_
         )
-        logger.debug(result)
-        return result
+        first_api_response = data["first_api_response"]
+        name_statistics = None
+        if first_api_response == response_url:
+            statistics: dict = data["statistics_first_api"]
+            name_statistics = "statistics_first_api"
+        else:
+            statistics: dict = data["statistics_second_api"]
+            name_statistics = "statistics_second_api"
+        statistics["latency"] = time_
+        new_data = data.copy()
+        new_data[name_statistics] = statistics
+        await self.collection.update_one(
+            filter_,
+            {"$set": new_data}
+        )
+        return True
