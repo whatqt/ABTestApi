@@ -11,7 +11,7 @@ from utils.logger import logger
 from fastapi import FastAPI, Request
 from orm.postgresql.managament.white_list_urls import ManageWhiteListUrls
 from orm.postgresql.models import WhiteListUrls
-from orm.mongodb.managament.api_gateway import ManageAPIGateway, SaveCollections
+from orm.mongodb.managament.api_gateway import ManageAPIGateway, SaveStatistics
 import time
 import random
 import aiohttp
@@ -44,7 +44,7 @@ async def save_time_request(
     time_: float,
     response_url: str
 ):
-    save_collection = SaveCollections(
+    save_collection = SaveStatistics(
         id_user, main_api
     )
     await save_collection.save_time_request(
@@ -59,7 +59,7 @@ async def save_memory(
     memory: int,
     response_url: str
 ):
-    save_collection = SaveCollections(
+    save_collection = SaveStatistics(
         id_user, main_api
     )
     await save_collection.save_memory(
@@ -74,7 +74,7 @@ async def save_busyness_cpu(
     value: int,
     response_url: str
 ):
-    save_collection = SaveCollections(
+    save_collection = SaveStatistics(
         id_user, main_api
     )
     await save_collection.save_busyness_cpu(

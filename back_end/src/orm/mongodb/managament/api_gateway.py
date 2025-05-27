@@ -59,7 +59,7 @@ class ManageAPIGateway(Settings):
         )
         return result
     
-class SaveCollections(Settings):
+class SaveStatistics(Settings):
     def __init__(self, id_user: str, main_api: str):
         super().__init__(id_user)
         self.main_api = main_api
