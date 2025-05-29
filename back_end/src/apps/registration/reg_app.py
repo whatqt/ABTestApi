@@ -117,8 +117,12 @@ async def logout(
     )
     
 
-@app.get("/refresh")
+
+# @app.route("/refresh", methods=['POST', 'GET', "DELETE"])
 @app.post("/refresh")
+@app.delete("/refresh")
+@app.get("/refresh")
+@app.patch("/refresh")
 async def refresh(
     refresh_token = Cookie(default=None),
     email = Cookie(default=None),

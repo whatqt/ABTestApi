@@ -9,17 +9,21 @@ from src.utils.logger import logger
 
 class Settings:
     '''Настройка колекции mongoDB. Класс ТОЛЬКО для наследования'''
-    def __init__(self, id_user: str):
+    def __init__(self, id_user: str, main_api: str):
         self.db = client["abtestapi"]
         self.id_user = id_user
         self.collection = self.db[self.id_user]
+        self.main_api = main_api
 
 class ManageAPIGateway(Settings):
     '''
     Управляет базой данных для Mon
     '''
-    def __init__(self, id_user: str):
-        super().__init__(id_user)
+    def __init__(self, id_user: str, main_api: str):
+        super().__init__(
+            id_user,
+            main_api
+        )
         
     async def create_data(
         self, 
@@ -35,8 +39,8 @@ class ManageAPIGateway(Settings):
             }
             result = await self.collection.insert_one(
                 {
-                    "_id": data["main_api"],
-                    "main_api": data["main_api"],
+                    "_id": data["main_api"],      # исправить и понять, 
+                    "main_api": self.main_api,    # что лучше
                     "first_api_percent": data["first_api_percent"],
                     "first_api_response": data["first_api_response"],
                     "second_api_percent": data["second_api_percent"],
@@ -57,16 +61,35 @@ class ManageAPIGateway(Settings):
             main_api_list.append(main_api)
         return main_api_list
 
-    async def get(self, main_api: str) -> dict:
+    async def get(self) -> dict:
         result = await self.collection.find_one(
-            {"_id": main_api}
+            {"_id": self.main_api}
+        )
+        return result
+    
+    async def delete(self) -> int:
+        result = await self.collection.delete_one(
+            {"_id": self.main_api},
+        )
+        return result.deleted_count 
+        
+    async def update(self, new_data: dict) -> int:
+        data_for_replace = await self.get()
+        for key in new_data.keys():
+            data_for_replace[key] = new_data[key]
+
+        result = await self.collection.update_one(
+            {"_id": self.main_api},
+            {"$set": data_for_replace}
         )
         return result
     
 class SaveStatistics(Settings):
     def __init__(self, id_user: str, main_api: str):
-        super().__init__(id_user)
-        self.main_api = main_api
+        super().__init__(
+            id_user,
+            main_api
+        )
 
 
     async def __abstract_save_statistic(
