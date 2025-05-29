@@ -68,6 +68,7 @@ async def login(
     access_token = await jwt_token.create_accsses_token(
         payload
     )
+    # пернести создание и занесение рефреш токена
     refresh_token = await jwt_token.create_refresh_token(
         {"sub": str(user.id)}
     )

@@ -6,7 +6,6 @@ from fastapi import FastAPI
 from apps.index.index_app import app as index_app
 from apps.registration.reg_app import app as reg_app
 from apps.api_gateway.api_gateway_app import app as api_gateway_app
-from fastapi.middleware.cors import CORSMiddleware
 from apps.query_separator.query_app import app as query_app
 
 

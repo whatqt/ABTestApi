@@ -8,12 +8,16 @@ from src.utils.logger import logger
 
 
 class Settings:
+    '''Настройка колекции mongoDB. Класс ТОЛЬКО для наследования'''
     def __init__(self, id_user: str):
         self.db = client["abtestapi"]
         self.id_user = id_user
         self.collection = self.db[self.id_user]
 
 class ManageAPIGateway(Settings):
+    '''
+    Управляет базой данных для Mon
+    '''
     def __init__(self, id_user: str):
         super().__init__(id_user)
         

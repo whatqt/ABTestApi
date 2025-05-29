@@ -7,6 +7,14 @@ from logging.handlers import RotatingFileHandler
 
 
 def setup_logger() -> logging.Logger:
+    '''
+    Перехватывает логер uvicorn и изменяем настройки, а именно:
+    добавление уровня DEBUG в консоль,
+    записывание логов от уровня INFO в файл
+
+    :return: logger
+    '''
+    
     logger = logging.getLogger("uvicorn.error")  # Используем Uvicorn-логгер
     logger.setLevel(logging.DEBUG)
     
