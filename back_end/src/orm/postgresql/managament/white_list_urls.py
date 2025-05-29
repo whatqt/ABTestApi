@@ -70,7 +70,14 @@ class ManageWhiteListUrls:
                     logger.error(f"Возникла ошибка при занесение данных: {e}")
 
     @classmethod
-    async def delete(cls, url: str) -> Union[WhiteListUrls, None]:
+    async def delete(cls, url: str) -> Union[True, None]:
+        '''
+        Удаляет объект возвращая True или None.
+
+        :param url: url пользователя
+        :return True | None: если пользователь был успешно удалён,
+        то возвращает True, иначе None
+        '''
         async with AsyncSession(
             bind=engine,
             autoflush=False,
@@ -84,12 +91,10 @@ class ManageWhiteListUrls:
                 )
                 obj = obj.scalar_one_or_none() 
                 if not obj:
-                    return None
+                    return obj
                 try:
                     await session.delete(obj)
                     await session.commit()
                     return True
-                except IntegrityError:
-                    return None
                 except Exception as e:
                     logger.error(f"Возникла ошибка при занесение данных: {e}")
