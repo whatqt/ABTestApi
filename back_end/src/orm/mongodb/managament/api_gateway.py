@@ -4,7 +4,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from mongodb.settings import client
 from pymongo.errors import DuplicateKeyError
 from src.utils.logger import logger
-
+from typing import Union
 
 
 class Settings:
@@ -73,8 +73,10 @@ class ManageAPIGateway(Settings):
         )
         return result.deleted_count 
         
-    async def update(self, new_data: dict) -> int:
+    async def update(self, new_data: dict) -> Union[dict, None]:
         data_for_replace = await self.get()
+        if not data_for_replace:
+            return None
         for key in new_data.keys():
             data_for_replace[key] = new_data[key]
 

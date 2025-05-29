@@ -72,12 +72,11 @@ async def get(
 ):
     user_id = request.state.payload["sub"]
     api_gateway = ManageAPIGateway(
-        id_user=user_id
+        id_user=user_id,
+        main_api=main_api
     )
     if main_api:
-        data = await api_gateway.get(
-            main_api=main_api
-        )
+        data = await api_gateway.get()
     else:
         data = await api_gateway.get_all_main_api()
     content = {
@@ -130,8 +129,9 @@ async def delete(
         id_user=id_user,
         main_api=main_api
     )
-    result = await api_gateway.delete()
-    if result:
+    result_mongodb = await api_gateway.delete()
+    result_postgres = await ManageWhiteListUrls.delete(main_api)
+    if result_mongodb and result_postgres:
         return JSONResponse(
             content={"status": "Successfully deleted"},
             status_code=status.HTTP_202_ACCEPTED
@@ -155,6 +155,11 @@ async def update(
         main_api=main_api
     )
     result = await api_gateway.update(data)
+    if not result:
+        return JSONResponse(
+            content={"status": f"такого main_api {main_api} не существует"},
+            status_code=status.HTTP_202_ACCEPTED
+        )
     logger.debug(result)
     return JSONResponse(
         content={"status": "Successfully updated"},

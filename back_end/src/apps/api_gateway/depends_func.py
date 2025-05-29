@@ -49,45 +49,53 @@ async def validate_data_from_update(request: Request, body: dict = Body()):
         "second_api_percent",
     ]
     check_percent = False
+    if "main_api" not in body:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE, 
+            detail=f"a field 'main_api' with that name does not exist."
+        )
+            
     for key in body.keys():
-        if key in required_keys:
-            if key == "first_api_percent" or key == "second_api_percent":
-                if check_percent:
+        if key == "first_api_percent" or key == "second_api_percent":
+            if check_percent:
+                continue
+            else:
+                check_percent = True
+                first_api_percent = body.get(
+                    "first_api_percent", None
+                )
+                second_api_percent = body.get(
+                    "second_api_percent", None
+                )
+                if not first_api_percent and not second_api_percent:
                     continue
                 else:
-                    check_percent = True
-                    first_api_percent = int(
-                        body.get("first_api_percent", None)
+                    payload = request.state.payload
+                    id_user = payload["sub"]
+                    api_gateway = ManageAPIGateway(
+                        id_user=id_user,
+                        main_api=body["main_api"]
                     )
-                    second_api_percent = int(
-                        body.get("second_api_percent", None)
-                    )
-                    if not first_api_percent and not second_api_percent:
-                        continue
-                    else:
-                        payload = request.state.payload
-                        id_user = payload["sub"]
-                        api_gateway = ManageAPIGateway(
-                            id_user=id_user,
-                            main_api=body["main_api"]
-                        )
-                        if first_api_percent is None:
-                            first_api_percent = await api_gateway.get()
-                            first_api_percent = first_api_percent["first_api_percent"]
-                        elif second_api_percent is None:
-                            second_api_percent = await api_gateway.get()
-                            second_api_percent = second_api_percent["second_api_percent"]
-                        if first_api_percent+second_api_percent == 100:
+                    if first_api_percent is None:
+                        first_api_percent = await api_gateway.get()
+                        first_api_percent = first_api_percent["first_api_percent"]
+                    elif second_api_percent is None:
+                        second_api_percent = await api_gateway.get()
+                        second_api_percent = second_api_percent["second_api_percent"]
+                    try:
+                        if int(first_api_percent)+int(second_api_percent) == 100:
                             continue
                         else:
                             raise HTTPException(
                                 status_code=status.HTTP_406_NOT_ACCEPTABLE, 
                                 detail=f"first_api_percent and second_api_percent should both add up to 100 percent"
                             )
-            continue
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_406_NOT_ACCEPTABLE, 
-                detail=f"a field {key} with that name does not exist."
-            )
+                    except ValueError:
+                        raise HTTPException(
+                            status_code=status.HTTP_406_NOT_ACCEPTABLE,
+                            detail=f"first_api_percent and second_api_percent should both add up to 100 percent"
+
+                        )
+
+
     return body

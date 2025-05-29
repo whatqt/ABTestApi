@@ -68,3 +68,28 @@ class ManageWhiteListUrls:
                     return None
                 except Exception as e:
                     logger.error(f"Возникла ошибка при занесение данных: {e}")
+
+    @classmethod
+    async def delete(cls, url: str) -> Union[WhiteListUrls, None]:
+        async with AsyncSession(
+            bind=engine,
+            autoflush=False,
+            expire_on_commit=False
+        ) as session:
+            async with session.begin():
+                obj = await session.execute(
+                    select(WhiteListUrls).where(
+                        WhiteListUrls.url==url
+                    )
+                )
+                obj = obj.scalar_one_or_none() 
+                if not obj:
+                    return None
+                try:
+                    await session.delete(obj)
+                    await session.commit()
+                    return True
+                except IntegrityError:
+                    return None
+                except Exception as e:
+                    logger.error(f"Возникла ошибка при занесение данных: {e}")

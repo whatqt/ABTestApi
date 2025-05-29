@@ -91,8 +91,11 @@ async def query_separator(
 ):  
     id_user = str(request.state.id_user)
     main_api = request.state.main_api
-    api_gateway = ManageAPIGateway(id_user)
-    settings_url = await api_gateway.get(main_api)
+    api_gateway = ManageAPIGateway(
+        id_user,
+        main_api
+    )
+    settings_url = await api_gateway.get()
     current_url_number = random.randrange(0, 2)
     match current_url_number:
         case 0:
