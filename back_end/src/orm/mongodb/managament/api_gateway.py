@@ -30,6 +30,7 @@ class Settings:
         self.id_user = id_user
         self.collection = self.db[self.id_user]
         self.main_api = main_api
+        
 class ManageAPIGateway(Settings):
     '''CRUD операции над документами'''
     def __init__(self, id_user: str, main_api: str):

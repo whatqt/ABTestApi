@@ -30,6 +30,10 @@ async def check_url_in_white_list(
     request: Request,
     call_next: callable
 ):
+    '''
+    проверяет, была ли переадрисация от допустимого URL. 
+    Если да, то вернёт объект WhiteListUrls. Иначе вернёт ошибку.
+    '''
     obj_url = await check_redirect(request)
     if isinstance(obj_url, WhiteListUrls):
         request.state.id_user = obj_url.user_id
@@ -44,6 +48,15 @@ async def save_time_request(
     time_: float,
     response_url: str
 ):
+    '''
+    Сохраняет время запроса.
+    
+    Params:
+        id_user: Id пользователя.
+        main_api: Url, с которого был отправлен запрос.
+        time_: Время запроса.
+        response_url: Какой url обработал.
+    '''
     save_collection = SaveStatistics(
         id_user, main_api
     )
@@ -59,6 +72,15 @@ async def save_memory(
     memory: int,
     response_url: str
 ):
+    '''
+    Сохраняет время запроса.
+    
+    Params:
+        id_user: Id пользователя.
+        main_api: Url, с которого был отправлен запрос.
+        memory: Память, которая была затрачена на запрос.
+        response_url: Какой url обработал.
+    '''
     save_collection = SaveStatistics(
         id_user, main_api
     )
@@ -74,6 +96,15 @@ async def save_busyness_cpu(
     value: int,
     response_url: str
 ):
+    '''
+    Сохраняет время запроса.
+    
+    Params:
+        id_user: Id пользователя.
+        main_api: Url, с которого был отправлен запрос.
+        value: Сколько было затрачено процессора во время запроса.
+        response_url: Какой url обработал.
+    '''
     save_collection = SaveStatistics(
         id_user, main_api
     )
@@ -89,6 +120,19 @@ async def query_separator(
     request: Request, 
     back_task: BackgroundTasks
 ):  
+    '''
+    Ручка, которая принимает чужие запросы, 
+    которые прошли проверки в middleware check_url_in_white_list.
+    После того, как запрос был перенаправлен суда, 
+    то здесь вычисляется следующая сстатистика:
+        время запроса,
+        кол-во использовааной памяти во время запроса,
+        нагруженность CPU во время запроса.
+
+    Params:
+        request: Запрос.
+        back_task: Функция BackgroundTasks для создание фоновых задачей.
+    '''
     id_user = str(request.state.id_user)
     main_api = request.state.main_api
     api_gateway = ManageAPIGateway(
@@ -96,7 +140,7 @@ async def query_separator(
         main_api
     )
     settings_url = await api_gateway.get()
-    current_url_number = random.randrange(0, 2)
+    current_url_number = random.randrange(0, 2) # сделать здесь эту систему
     match current_url_number:
         case 0:
             response_url = settings_url["first_api_response"]

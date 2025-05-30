@@ -4,10 +4,21 @@ from fastapi import (
 from utils.logger import logger
 from fastapi.responses import JSONResponse
 from orm.postgresql.managament.white_list_urls import ManageWhiteListUrls
+from orm.postgresql.models import WhiteListUrls
+from typing import Union
 
 
+async def check_redirect(request: Request) -> Union[WhiteListUrls, JSONResponse]:
+    '''
+    Проверяет, был ли запрос redirect. 
+    Если это был прямой запрос, то вернёт ответ со статусом 400,
+    если нет, то вернёт объект WhiteListUrls.
 
-async def check_redirect(request: Request):
+    Params:
+        request: Запрос.
+    :return WhiteListUrls | JSONResponse: 
+    Вернёт WhiteListUrls, если проверка была пройдена, иначе JSONResponse.
+    '''
     data_from_redirect_bytes: tuple = request.scope.get("headers")[-2]
     element: bytes = data_from_redirect_bytes[0].decode()
     logger.debug(element)

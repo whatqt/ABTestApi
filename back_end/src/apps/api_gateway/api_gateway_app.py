@@ -19,7 +19,7 @@ from src.orm.mongodb.managament.api_gateway import ManageAPIGateway
 from src.orm.postgresql.managament.white_list_urls import ManageWhiteListUrls
 from src.orm.postgresql.managament.users import ManageUser
 from src.orm.mongodb.managament.api_gateway import ManageAPIGateway
-
+from typing import Union
 
 
 
@@ -29,6 +29,12 @@ app = FastAPI()
 async def jwt(
     request: Request, call_next: callable,
 ):
+    '''
+    Проверяет валидность JWT токена, а именно accses токен. 
+    Если accses токен валидный, то в request.state помещается данные токена (payload).
+    Если токен истёк, то пользователя редиректит на url /registration/refresh, 
+    где обновляется accses токен.
+    '''
     authorization = request.headers.get(
         "Authorization", None
     )
@@ -51,6 +57,12 @@ async def jwt(
     
 @app.exception_handler(Exception)
 async def multi_handler(request: Request, exc: Exception):
+    '''
+    Перехватывает все ошибки (которые были не обработаны) и записывает всё в log file.
+    Если ошибка возникла в обработчике url, то в log file будет записан имя
+    обработчика.
+    Если же ошибка возникла в middleware, то будет записано просто "middleware".
+    '''
     name_handler = request.scope.get("route", None)
     if not name_handler:
         name_handler = "middleware"
@@ -64,12 +76,22 @@ async def multi_handler(request: Request, exc: Exception):
         content="server error"
     )
 
-@app.get("/records/{main_api}")
-@app.get("/records")
+@app.get("/records/{main_api}") # подумать про то, как реализовать этот поиск
+@app.get("/records")            # посольку main_api, это id, но в виде полного URL.
 async def get(
     request: Request,
     main_api: str = None,
-):
+) -> JSONResponse:
+    '''
+    Получает данные по своим main_api.
+    Если было указан id записи, то вернёт результат именно этого поиска (поиск по id).
+    Иначе вернёт все записи.
+
+    Params:
+        request: Запрос.
+        main_api: Id записи (имя записи).
+    :return JSONResponse: Ответ ручки.
+    '''
     user_id = request.state.payload["sub"]
     api_gateway = ManageAPIGateway(
         id_user=user_id,
@@ -93,7 +115,18 @@ async def create(
         validate_data_from_create,
 
     ),
-):  
+) -> Union[JSONResponse, HTTPException]:  
+    '''
+    Создаёт запись в MongoDB и в PostgreSQL.
+    Если уже была создана запись с таким main_api,  
+    то пользователь поучит об этом ответ.
+
+    Params:
+        request: Запрос.
+        data: Body запроса, который прошёл сериализацию.
+    
+    :return JSONResponse | HTTPException: Ответ.
+    '''
     payload: dict = request.state.payload
     id_user = payload["sub"]
     user = await ManageUser.get_by_id(int(id_user))
@@ -122,7 +155,17 @@ async def create(
 async def delete(
     request: Request,
     data = Depends(validate_data_from_delete)
-):  
+) -> Union[JSONResponse, HTTPException]:  
+    '''
+    Удаляет запись из MongoDB и PostgreSQL,
+    если данные (body) прошли проверку.
+
+    Params:
+        request: Запрос.
+        data: Body запроса, который прошёл сериализацию.
+
+    :return JSONResponse | HTTPException: Ответ.
+    '''
     main_api = data["main_api"]
     id_user = request.state.payload["sub"]
     api_gateway = ManageAPIGateway(
@@ -136,9 +179,9 @@ async def delete(
             content={"status": "Successfully deleted"},
             status_code=status.HTTP_202_ACCEPTED
         )
-    return JSONResponse(
-        content={
-            "status": f"Not deleted. Reason: the object {main_api!r} was not found"
+    return HTTPException(
+        detail={
+            "Not deleted. Reason: the object {main_api!r} was not found"
         },
         status_code=status.HTTP_202_ACCEPTED
     )
@@ -147,7 +190,18 @@ async def delete(
 async def update(
     request: Request,
     data = Depends(validate_data_from_update)
-):
+) -> Union[JSONResponse, HTTPException]:
+    '''
+    Обновляет данные в MongoDB.
+    Позволяет обновить только те поля, 
+    которые были явно указаны в data (кроме main_api).
+
+    Params:
+        request: Запрос.
+        data: Body запроса, который прошёл сериализацию.
+
+    :return JSONResponse | HTTPException: Ответ.
+    '''
     main_api = data["main_api"]
     id_user = request.state.payload["sub"]
     api_gateway = ManageAPIGateway(
@@ -156,8 +210,8 @@ async def update(
     )
     result = await api_gateway.update(data)
     if not result:
-        return JSONResponse(
-            content={"status": f"такого main_api {main_api} не существует"},
+        return HTTPException(
+            detail=f"такого main_api {main_api} не существует",
             status_code=status.HTTP_202_ACCEPTED
         )
     logger.debug(result)

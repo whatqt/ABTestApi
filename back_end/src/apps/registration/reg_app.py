@@ -27,15 +27,24 @@ app = FastAPI()
 async def get_crypto_data() -> CryptoData:
     return CryptoData()
 
+# добавить суда middleware
+
 @app.get("/")
 async def index():
     return JSONResponse({"response": "ok"})
 
-@app.post("/create")
+@app.post("/registration")
 async def create(
     data = Body(),
     crypto_data: CryptoData = Depends(get_crypto_data)
 ):
+    """
+    Регистрация пользователя.
+
+    Params:
+        data: тело запроса
+        crypto_data: класс CryptoData, который отвечает за шифрование
+    """
     hash_password = await crypto_data.crypto_data(data["password"])
     user = await ManageUser.create(
         data["email"],
@@ -55,6 +64,14 @@ async def login(
     jwt_token: JWToken = Depends(JWToken),
     refresh_token = Cookie(default=None),
 ):  
+    '''
+    Вход пользователя в аккаунт.
+    
+    Params:
+        user: Запись из Users
+        jwt_token: Класс, для управления jwt токенами.
+        refresh_token: Рефреш токен из куки. Если его нет, то будет None.
+    '''
     if refresh_token:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -95,6 +112,14 @@ async def logout(
     refresh_token = Cookie(default=None),
     email = Cookie(default=None),
 ):
+    '''
+    Выход пользователя из системы.
+    При выходе удаляются cookie.
+    
+    Params:
+        refresh_token: Рефреш токен из куки.
+        email: Почта из куки.
+    '''
     if refresh_token or email:
         response = JSONResponse(
             content={"message": "successfully"},
@@ -116,9 +141,6 @@ async def logout(
         detail="access is denied"
     )
     
-
-
-# @app.route("/refresh", methods=['POST', 'GET', "DELETE"])
 @app.post("/refresh")
 @app.delete("/refresh")
 @app.get("/refresh")
@@ -131,6 +153,13 @@ async def refresh(
         JWToken
     ),
 ):
+    '''
+    Обновляет accses токен, если тот истёк.
+        refresh_token: Рефреш токен из куки.
+        email: Почта из куки.
+        manage_user: Класс для управления пользователем
+        jwt_token: Класс для управления токенами
+    '''
     if refresh_token and email:
         payload = await jwt_token.decode(refresh_token)
         if payload:
@@ -153,28 +182,4 @@ async def refresh(
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail=f"Invalid token"
-    )
-
-@app.post("/me")
-async def about_user(
-    request: Request,
-    cred: HTTPAuthCredentials = Depends(
-        HTTPBearer()
-    ),
-    jwt_token: JWToken = Depends(
-        JWToken
-    ),    
-):  
-    token = cred.credentials
-    try:
-        payload = await jwt_token.decode(token)
-    except ExpiredSignatureError as e:
-        return RedirectResponse("/registration/refresh")
-    except InvalidTokenError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="invalid token"
-        )
-    return JSONResponse(
-        payload
     )
