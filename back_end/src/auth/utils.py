@@ -23,7 +23,17 @@ class JWToken:
         type_token: str,
         private_key: str = PRIVATE_KEY_PAHT.read_text(),
     ) -> str:  
+        '''
+        Создаёт jwt токен в зависимости от аргумента type_token.
         
+        Params:
+            payload: Данные, которые будут в токене, при его расшифровки.
+            type_token: Тип токена (accsses или refresh).
+            private_key: Приватный ключ, при помощи которого создаётся токен.
+        
+        Returns:
+            токен
+        '''
         to_payload = payload.copy()
         now = datetime.utcnow()
         if type_token == "accsses":
