@@ -3,3 +3,7 @@ __pycache__
 *.log
 .env
 shit
+certs
+test_server/
+shit
+
