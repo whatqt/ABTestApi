@@ -25,6 +25,8 @@ from typing import Union
 
 app = FastAPI()
 
+
+
 @app.middleware("http")
 async def jwt(
     request: Request, call_next: callable,
@@ -76,6 +78,8 @@ async def multi_handler(request: Request, exc: Exception):
         content="server error"
     )
 
+
+
 @app.get("/records/{main_api}") # подумать про то, как реализовать этот поиск
 @app.get("/records")            # посольку main_api, это id, но в виде полного URL.
 async def get(
@@ -108,14 +112,13 @@ async def get(
         content=content,
     )
 
-@app.post("/create")
+@app.post("/create", response_model=None)
 async def create(
     request: Request,
     data = Depends(
         validate_data_from_create,
-
     ),
-) -> Union[JSONResponse, HTTPException]:  
+) -> Union[JSONResponse]:  
     '''
     Создаёт запись в MongoDB и в PostgreSQL.
     Если уже была создана запись с таким main_api,  
@@ -144,18 +147,18 @@ async def create(
     if not result_mongodb or not result_postgres:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"на url {data["main_api"]!r} уже есть конфигурация"
+            detail=f"на url {data['main_api']} уже есть конфигурация"
         )
     return JSONResponse(
         content={"status": "Successfully created"},
         status_code=status.HTTP_201_CREATED
     )
 
-@app.delete("/delete")
+@app.delete("/delete", response_model=None)
 async def delete(
     request: Request,
-    data = Depends(validate_data_from_delete)
-) -> Union[JSONResponse, HTTPException]:  
+    data = Depends(validate_data_from_delete),
+) -> Union[JSONResponse]:  
     '''
     Удаляет запись из MongoDB и PostgreSQL,
     если данные (body) прошли проверку.
@@ -179,7 +182,7 @@ async def delete(
             content={"status": "Successfully deleted"},
             status_code=status.HTTP_202_ACCEPTED
         )
-    return HTTPException(
+    raise HTTPException(
         detail={
             "Not deleted. Reason: the object {main_api!r} was not found"
         },
@@ -190,7 +193,7 @@ async def delete(
 async def update(
     request: Request,
     data = Depends(validate_data_from_update)
-) -> Union[JSONResponse, HTTPException]:
+) -> Union[JSONResponse]:
     '''
     Обновляет данные в MongoDB.
     Позволяет обновить только те поля, 
@@ -200,7 +203,12 @@ async def update(
         request: Запрос.
         data: Body запроса, который прошёл сериализацию.
 
-    :return JSONResponse | HTTPException: Ответ.
+    Returns:
+      JSONResponse: Ответ.
+
+    Raises:
+        HTTPException: 
+
     '''
     main_api = data["main_api"]
     id_user = request.state.payload["sub"]
@@ -210,9 +218,9 @@ async def update(
     )
     result = await api_gateway.update(data)
     if not result:
-        return HTTPException(
+        raise HTTPException(
             detail=f"такого main_api {main_api} не существует",
-            status_code=status.HTTP_202_ACCEPTED
+            status_code=status.HTTP_404_NOT_FOUND
         )
     logger.debug(result)
     return JSONResponse(

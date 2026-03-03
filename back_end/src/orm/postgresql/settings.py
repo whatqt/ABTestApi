@@ -7,6 +7,6 @@ from config import PASSWORD_POSTGRES
 
 
 engine = create_async_engine(
-    f"postgresql+asyncpg://postgres:{PASSWORD_POSTGRES}@localhost/abtestapi",
+    f"postgresql+asyncpg://habrpguser:{PASSWORD_POSTGRES}@127.0.0.1:5432/abtestapi",
     echo=False
 )

@@ -21,19 +21,14 @@ from utils.logger import logger
 
 app = FastAPI()
 
-
-
 # Зависимости
 async def get_crypto_data() -> CryptoData:
     return CryptoData()
 
 # добавить суда middleware
 
-@app.get("/")
-async def index():
-    return JSONResponse({"response": "ok"})
 
-@app.post("/registration")
+@app.post("/")
 async def create(
     data = Body(),
     crypto_data: CryptoData = Depends(get_crypto_data)
